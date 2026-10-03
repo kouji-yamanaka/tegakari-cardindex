@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>手がかり想起カード</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fdf6e9;
+    --paper:#fffdf8;
+    --ink:#5b4636;
+    --ink-soft:#9a8574;
+    --line:#e6d8c2;
+    --blue:#7fb7de;
+    --green:#9fd3a4;
+    --orange:#f4a261;
+    --red:#ec8f8f;
+    --yellow:#f2c14e;
+    --font:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic UI",system-ui,sans-serif;
+    --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--font);font-weight:700;
+    font-size:18px;-webkit-tap-highlight-color:transparent;user-select:none;
+  }
+  .app{
+    max-width:560px;margin:0 auto;min-height:100%;
+    padding:16px 16px calc(20px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;
+  }
+  .screen{display:none;flex:1;flex-direction:column;gap:14px}
+  .screen.on{display:flex}
+  h1,h2,p{margin:0}
+
+  .btn{
+    font:inherit;font-size:22px;font-weight:900;color:#fff;
+    background:var(--orange);border:0;border-radius:999px;
+    padding:14px 40px;cursor:pointer;align-self:center;
+    box-shadow:0 5px 0 #d9824a;transition:transform .08s, box-shadow .08s;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #d9824a}
+  .btn.blue{background:var(--blue);box-shadow:0 5px 0 #5f97bf}
+  .btn.blue:active{box-shadow:0 1px 0 #5f97bf}
+
+  /* 上の バー */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:40px;padding-right:48px}
+  .round{font-size:16px;white-space:nowrap}
+  .round b{font-size:22px}
+  .step{display:flex;gap:4px}
+  .step span{font-size:12px;padding:3px 8px;white-space:nowrap;border-radius:999px;background:#f1e7d8;color:var(--ink-soft)}
+  .step span.on{background:var(--orange);color:#fff}
+
+  .lead{text-align:center;font-size:22px;line-height:1.6}
+  .sub{text-align:center;color:var(--ink-soft);font-weight:500;font-size:16px;line-height:1.7}
+
+  /* タイトル */
+  .title{justify-content:center;align-items:center;text-align:center;gap:20px}
+  .title h1{font-size:32px;font-weight:900;letter-spacing:.04em}
+  .title .how{
+    background:var(--paper);border-radius:20px;padding:16px 18px;text-align:left;
+    font-weight:500;line-height:1.9;font-size:17px;max-width:420px;
+  }
+  .title .how b{color:var(--orange)}
+  .title .deco{font-family:var(--emoji);font-size:44px;letter-spacing:8px}
+
+  /* カード */
+  .grid{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
+  .grid.c3{grid-template-columns:repeat(3,1fr)}
+  .card{
+    background:var(--paper);border-radius:20px;padding:10px 6px 12px;text-align:center;
+    box-shadow:0 4px 0 var(--line);display:flex;flex-direction:column;align-items:center;gap:2px;
+    animation:flip .35s ease both;
+  }
+  .card .cat{font-size:13px;color:var(--ink-soft);background:#f6eee2;border-radius:999px;padding:1px 10px}
+  .card .pic{font-family:var(--emoji);font-size:54px;line-height:1.2}
+  .card .name{font-size:19px}
+  .grid.c3 .card .pic{font-size:46px}
+  .grid.c3 .card .name{font-size:17px}
+  @keyframes flip{from{transform:rotateY(90deg);opacity:0}to{transform:none;opacity:1}}
+
+  .timer{height:12px;border-radius:6px;background:#efe6d8;overflow:hidden}
+  .timer i{display:block;height:100%;width:100%;background:var(--blue);border-radius:6px;transform-origin:left}
+
+  /* 数字タップ */
+  .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px}
+  .nums button{
+    font:inherit;font-size:36px;font-weight:900;color:var(--ink);height:90px;border:0;border-radius:22px;
+    background:var(--paper);box-shadow:0 5px 0 var(--line);cursor:pointer;position:relative;
+    transition:transform .06s, box-shadow .06s, opacity .2s;
+  }
+  .nums button:active{transform:translateY(3px);box-shadow:0 2px 0 var(--line)}
+  .nums button.done{background:var(--green);color:#fff;box-shadow:none;opacity:.55}
+  .nums button.done::after{
+    content:attr(data-n);position:absolute;top:6px;left:10px;font-size:14px;color:#fff;
+  }
+  .shake{animation:shake .4s}
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}
+    40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}
+  }
+
+  /* 思い出す */
+  .q{
+    background:var(--paper);border-radius:22px;padding:16px;text-align:center;
+    display:flex;flex-direction:column;gap:8px;align-items:center;box-shadow:0 4px 0 var(--line);
+  }
+  .q .hint{font-size:14px;color:#fff;background:var(--orange);border-radius:999px;padding:2px 12px}
+  .q .text{font-size:23px;line-height:1.55}
+  .q .text .tag{display:inline-block;background:#fff1dc;border:2px solid var(--orange);border-radius:12px;padding:0 10px;margin:0 2px}
+  .q .text .ex{font-family:var(--emoji)}
+  .qcount{text-align:center;color:var(--ink-soft);font-size:15px}
+  .choices{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .choices button{
+    font:inherit;color:var(--ink);background:var(--paper);border:3px solid transparent;border-radius:22px;
+    padding:10px 6px 12px;cursor:pointer;box-shadow:0 5px 0 var(--line);
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    transition:transform .06s, box-shadow .06s;
+  }
+  .choices button:active{transform:translateY(3px);box-shadow:0 2px 0 var(--line)}
+  .choices .pic{font-family:var(--emoji);font-size:52px;line-height:1.2}
+  .choices .name{font-size:19px;line-height:1.3}
+  .choices .name.long{font-size:15px}
+  .choices button.right{background:#e6f5e7;border-color:var(--green)}
+  .choices button.wrong{background:#fbe6e6;border-color:var(--red)}
+  .choices button.fade{opacity:.4}
+  .fb{text-align:center;height:30px;font-size:21px}
+  .fb.good{color:#5aa162}
+  .fb.bad{color:#c96d6d}
+
+  /* ラウンドの けっか */
+  .mark{position:relative}
+  .mark::after{
+    position:absolute;top:4px;right:8px;font-size:22px;font-weight:900;
+  }
+  .mark.ok::after{content:"○";color:#5aa162}
+  .mark.ng::after{content:"×";color:#c96d6d}
+  .mark.ng{background:#fdf0f0}
+
+  /* さいごの けっか */
+  .final{justify-content:center;align-items:center;text-align:center;gap:16px}
+  .final h2{font-size:30px;font-weight:900}
+  .score{font-size:20px}
+  .score b{font-size:44px;color:var(--orange)}
+  .stars{font-size:48px;letter-spacing:6px}
+  .stars span{display:inline-block;color:#e8dccb}
+  .stars .pop{color:var(--yellow);animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+  @keyframes pop{0%{transform:scale(.2) rotate(-40deg)}100%{transform:none}}
+  table{border-collapse:collapse;font-size:17px;background:var(--paper);border-radius:16px;overflow:hidden;min-width:260px}
+  td{padding:7px 16px;border-bottom:1px solid #f1e7d8}
+  tr:last-child td{border-bottom:0}
+  td:last-child{text-align:right}
+
+  .mute{
+    position:fixed;top:10px;right:max(10px, calc(50% - 270px));z-index:6;
+    width:40px;height:40px;border-radius:50%;border:0;background:var(--paper);
+    box-shadow:0 2px 0 var(--line);font-size:18px;cursor:pointer;opacity:.85;
+  }
+  #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10}
+
+  @media (prefers-reduced-motion:reduce){
+    .card,.shake,.stars .pop{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- タイトル -->
+  <section class="screen title on" id="sTitle">
+    <div class="deco">🍎🦁✈️🎹</div>
+    <h1>手がかり想起カード</h1>
+    <div class="how">
+      ① 絵を <b>数秒間</b> 覚えます<br>
+      ② 数字を <b>大きい順</b> にタップします<br>
+      ③ 「くだものは何でしたか？」などの<br>&emsp;<b>ヒント</b>をたよりに思い出します
+    </div>
+    <p class="sub">全5ラウンド。絵は 4枚 から 8枚 まで増えていきます。</p>
+    <button class="btn" id="startBtn">はじめる</button>
+  </section>
+
+  <!-- 覚える -->
+  <section class="screen" id="sMemo">
+    <div class="top">
+      <div class="round">ラウンド <b class="rNo">1</b> / 5</div>
+      <div class="step"><span class="on">覚える</span><span>数字</span><span>思い出す</span></div>
+    </div>
+    <p class="lead" id="memoLead">この絵を覚えてください</p>
+    <div class="timer"><i id="timerBar"></i></div>
+    <div class="grid" id="memoGrid"></div>
+    <button class="btn blue" id="memoDone">覚えた！</button>
+  </section>
+
+  <!-- 数字タップ -->
+  <section class="screen" id="sNum">
+    <div class="top">
+      <div class="round">ラウンド <b class="rNo">1</b> / 5</div>
+      <div class="step"><span>覚える</span><span class="on">数字</span><span>思い出す</span></div>
+    </div>
+    <p class="lead">数字を <b style="color:var(--orange)">大きい順</b> に<br>タップしてください</p>
+    <p class="sub" id="numSub">いちばん大きい数字から</p>
+    <div class="nums" id="nums"></div>
+  </section>
+
+  <!-- 思い出す -->
+  <section class="screen" id="sRecall">
+    <div class="top">
+      <div class="round">ラウンド <b class="rNo">1</b> / 5</div>
+      <div class="step"><span>覚える</span><span>数字</span><span class="on">思い出す</span></div>
+    </div>
+    <p class="qcount" id="qCount"></p>
+    <div class="q" id="q"></div>
+    <div class="choices" id="choices"></div>
+    <div class="fb" id="fb"></div>
+  </section>
+
+  <!-- ラウンドの けっか -->
+  <section class="screen" id="sRound">
+    <div class="top">
+      <div class="round">ラウンド <b class="rNo">1</b> / 5</div>
+    </div>
+    <p class="lead" id="roundLead"></p>
+    <div class="grid" id="roundGrid"></div>
+    <button class="btn" id="roundNext">つぎへ</button>
+  </section>
+
+  <!-- さいごの けっか -->
+  <section class="screen final" id="sFinal">
+    <h2 id="finalTitle">おつかれさまでした</h2>
+    <div class="stars" id="stars"><span>★</span><span>★</span><span>★</span></div>
+    <p class="score">思い出せた数 <b id="finalScore">0</b> / <span id="finalTotal">30</span></p>
+    <table id="finalTable"></table>
+    <button class="btn" id="againBtn">もういちど</button>
+  </section>
+</div>
+
+<button class="mute" id="muteBtn" type="button"></button>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------- 絵の なかま（カテゴリ） ---------- */
+  const CATS = [
+    ["くだもの",   "🍎りんご 🍌バナナ 🍇ぶどう 🍓いちご 🍑もも 🍊みかん 🍉すいか 🍐なし 🍒さくらんぼ"],
+    ["やさい",     "🥕にんじん 🍅トマト 🥒きゅうり 🍆なす 🌽とうもろこし 🥦ブロッコリー 🧅たまねぎ 🥔じゃがいも"],
+    ["どうぶつ",   "🦁ライオン 🐘ぞう 🦒キリン 🐼パンダ 🐻くま 🐒さる 🐯とら 🐰うさぎ"],
+    ["のりもの",   "✈️飛行機 🚗自動車 🚃電車 🚲自転車 🚢船 🚌バス 🚁ヘリコプター 🚀ロケット"],
+    ["鳥",         "🐔にわとり 🦆あひる 🦉ふくろう 🐧ペンギン 🦜インコ 🦅わし 🕊️はと 🦢はくちょう"],
+    ["海の生きもの", "🐙たこ 🦀かに 🐬いるか 🐳くじら 🦈さめ 🦑いか 🐢かめ 🦐えび"],
+    ["虫",         "🦋ちょう 🐝はち 🐞てんとう虫 🐜あり 🦗ばった 🐛いもむし 🪰はえ 🦟か"],
+    ["楽器",       "🎹ピアノ 🎸ギター 🥁たいこ 🎺トランペット 🎻バイオリン 🎷サックス 🪗アコーディオン"],
+    ["花",         "🌷チューリップ 🌻ひまわり 🌹ばら 🌸さくら 🪷はす 🌺ハイビスカス"],
+    ["スポーツ",   "⚽サッカー ⚾野球 🏀バスケットボール 🎾テニス 🏐バレーボール 🏓卓球 🎳ボウリング ⛳ゴルフ"],
+    ["料理",       "🍙おにぎり 🍣すし 🍜ラーメン 🍛カレー 🍞パン 🍕ピザ 🍔ハンバーガー 🍤てんぷら"],
+    ["おかし",     "🍰ケーキ 🍩ドーナツ 🍪クッキー 🍦ソフトクリーム 🍫チョコレート 🍡だんご 🍮プリン 🍭キャンディ"],
+    ["着るもの",   "👕シャツ 👖ズボン 👗ワンピース 🧦くつ下 🧤手ぶくろ 🧣マフラー 👒ぼうし 👟くつ"],
+    ["道具",       "✂️はさみ 🔨かなづち ✏️えんぴつ 🔑かぎ 🧹ほうき 🪚のこぎり 🧲じしゃく 🔦かいちゅう電灯"],
+  ].map(([cat, list]) => ({
+    cat,
+    items: list.split(" ").map(s => {
+      const m = s.match(/^(\P{L}+)(.+)$/u);     // 先頭の 絵文字 と 名前 に わける
+      return { pic: m[1], name: m[2], cat };
+    }),
+  }));
+
+  const ROUND_SIZES = [4, 5, 6, 7, 8];
+  const memoSeconds = n => 6 + n * 1.5;          // 4枚: 12秒 … 8枚: 18秒
+
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const shuffle = a => {
+    for (let i = a.length - 1; i > 0; i--) { const j = rnd(0, i); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  };
+  const $ = id => document.getElementById(id);
+  const show = id => document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id));
+
+  /* ---------- こうかおん ---------- */
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  let muted = store.get("tegakari-mute") === "1";
+  let ac = null;
+  function tone(freq, at, dur, { type = "sine", vol = 0.18 } = {}) {
+    const t = ac.currentTime + at;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(ac.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  const SE = {
+    tap:  () => tone(660, 0, 0.07, { type: "triangle", vol: 0.08 }),
+    good: () => { tone(1319, 0, 0.35); tone(1047, 0.16, 0.5); },
+    miss: () => { tone(330, 0, 0.18, { type: "triangle", vol: 0.12 }); tone(262, 0.14, 0.28, { type: "triangle", vol: 0.12 }); },
+    flip: () => tone(880, 0, 0.12, { type: "triangle", vol: 0.07 }),
+    star: i  => tone([784, 988, 1175][i], 0, 0.3, { type: "triangle", vol: 0.14 }),
+    fanfare: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.13, i === 3 ? 0.7 : 0.18, { type: "triangle", vol: 0.15 })),
+  };
+  function play(name, arg) {
+    if (muted) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+      SE[name](arg);
+    } catch {}
+  }
+  function renderMute() {
+    $("muteBtn").textContent = muted ? "🔇" : "🔊";
+    $("muteBtn").setAttribute("aria-label", muted ? "音を出す" : "音を消す");
+  }
+
+  /* ---------- じょうたい ---------- */
+  let ri = 0;              // ラウンド番号（0から）
+  let cards = [];          // このラウンドで 覚える 絵
+  let questions = [], qi = 0, answered = false;
+  let roundLog = [];       // [{ card, ok }]
+  let allLog = [];         // ラウンドごとの 正解数
+  let memoTimer = null;
+
+  function setRoundNo() {
+    document.querySelectorAll(".rNo").forEach(e => { e.textContent = ri + 1; });
+  }
+
+  function start() {
+    ri = 0; allLog = [];
+    stopConfetti();
+    startRound();
+  }
+
+  /* ① 覚える */
+  function startRound() {
+    const n = ROUND_SIZES[ri];
+    // なかまが かさならないように n種類 えらび、それぞれ 1枚
+    cards = shuffle([...CATS]).slice(0, n).map(c => c.items[rnd(0, c.items.length - 1)]);
+    roundLog = [];
+    setRoundNo();
+    $("memoLead").textContent = `この ${n}枚 の絵を覚えてください`;
+    const g = $("memoGrid");
+    g.className = "grid" + (n >= 5 ? " c3" : "");
+    g.innerHTML = cards.map((c, i) =>
+      `<div class="card" style="animation-delay:${i * 0.08}s"><span class="cat">${c.cat}</span>` +
+      `<span class="pic">${c.pic}</span><span class="name">${c.name}</span></div>`).join("");
+    show("sMemo");
+    play("flip");
+
+    const sec = memoSeconds(n);
+    const bar = $("timerBar");
+    bar.style.transition = "none";
+    bar.style.transform = "scaleX(1)";
+    void bar.offsetWidth;
+    bar.style.transition = `transform ${sec}s linear`;
+    bar.style.transform = "scaleX(0)";
+    clearTimeout(memoTimer);
+    memoTimer = setTimeout(endMemo, sec * 1000);
+  }
+
+  function endMemo() {
+    if (!$("sMemo").classList.contains("on")) return;
+    clearTimeout(memoTimer);
+    startNumbers();
+  }
+
+  /* ② 数字を 大きい順に タップ（気をそらす） */
+  let numOrder = [], numNext = 0;
+  function startNumbers() {
+    const count = ri < 2 ? 6 : 9;
+    const pool = new Set();
+    while (pool.size < count) pool.add(rnd(1, ri < 2 ? 30 : 99));
+    const nums = [...pool];
+    numOrder = [...nums].sort((a, b) => b - a);
+    numNext = 0;
+    const box = $("nums");
+    box.innerHTML = "";
+    shuffle(nums).forEach(v => {
+      const b = document.createElement("button");
+      b.textContent = v;
+      b.onclick = () => tapNum(b, v);
+      box.appendChild(b);
+    });
+    $("numSub").textContent = "いちばん大きい数字から";
+    show("sNum");
+  }
+
+  function tapNum(b, v) {
+    if (b.classList.contains("done")) return;
+    if (v === numOrder[numNext]) {
+      play("tap");
+      numNext++;
+      b.classList.add("done");
+      b.dataset.n = numNext;
+      $("numSub").textContent = numNext < numOrder.length ? `のこり ${numOrder.length - numNext}こ` : "できました！";
+      if (numNext === numOrder.length) setTimeout(startRecall, 700);
+    } else {
+      play("miss");
+      $("numSub").textContent = "もっと大きい数字がありますよ";
+      b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
+    }
+  }
+
+  /* ③ 手がかりで 思い出す */
+  function startRecall() {
+    questions = shuffle(cards.map((card, i) => {
+      const cat = CATS.find(c => c.cat === card.cat);
+      const others = shuffle(cat.items.filter(it => it !== card));
+      // ヒントの たとえ（出ていない 同じなかま）と、まちがいの 選択肢 3つ
+      const example = others[0];
+      const decoys = others.slice(1, 4);
+      return {
+        card,
+        type: i % 2 === 0 ? "cat" : "ex",
+        example,
+        choices: shuffle([card, ...decoys]),
+      };
+    }));
+    qi = 0;
+    show("sRecall");
+    renderQ();
+  }
+
+  function renderQ() {
+    const q = questions[qi];
+    answered = false;
+    $("qCount").textContent = `${qi + 1} / ${questions.length} 問目`;
+    $("q").innerHTML = q.type === "cat"
+      ? `<span class="hint">ヒント</span><div class="text">さっきの絵の中で<br><span class="tag">${q.card.cat}</span> は<br>何でしたか？</div>`
+      : `<span class="hint">ヒント</span><div class="text"><span class="ex">${q.example.pic}</span>${q.example.name} と<br>同じ なかま で、<br>さっき見たのは どれ？</div>`;
+    const box = $("choices");
+    box.innerHTML = "";
+    q.choices.forEach((c, i) => {
+      const b = document.createElement("button");
+      b.innerHTML = `<span class="pic">${c.pic}</span><span class="name${c.name.length >= 7 ? " long" : ""}">${c.name}</span>`;
+      b.onclick = () => answer(i);
+      box.appendChild(b);
+    });
+    setFb("");
+  }
+
+  function answer(i) {
+    if (answered) return;
+    answered = true;
+    const q = questions[qi];
+    const btns = [...$("choices").children];
+    const correct = q.choices.indexOf(q.card);
+    const ok = i === correct;
+    btns.forEach((b, k) => {
+      if (k === correct) b.classList.add("right");
+      else if (k === i) b.classList.add("wrong");
+      else b.classList.add("fade");
+    });
+    if (ok) { play("good"); setFb("せいかい！", "good"); }
+    else { play("miss"); setFb(`こたえは「${q.card.name}」でした`, "bad"); }
+    roundLog.push({ card: q.card, ok });
+    setTimeout(() => {
+      qi++;
+      if (qi < questions.length) renderQ(); else endRound();
+    }, ok ? 1000 : 2000);
+  }
+
+  function setFb(t, kind) {
+    const f = $("fb");
+    f.textContent = t;
+    f.className = "fb" + (kind ? " " + kind : "");
+  }
+
+  /* ラウンドの けっか */
+  function endRound() {
+    const good = roundLog.filter(r => r.ok).length;
+    allLog.push({ n: cards.length, good });
+    $("roundLead").textContent = good === cards.length
+      ? `ぜんぶ思い出せました！（${good} / ${cards.length}）`
+      : `${cards.length}枚 中 ${good}枚 思い出せました`;
+    const g = $("roundGrid");
+    g.className = "grid" + (cards.length >= 5 ? " c3" : "");
+    // 覚えたときと 同じ ならびで ふりかえる
+    g.innerHTML = cards.map(c => {
+      const ok = roundLog.find(r => r.card === c).ok;
+      return `<div class="card mark ${ok ? "ok" : "ng"}"><span class="cat">${c.cat}</span>` +
+             `<span class="pic">${c.pic}</span><span class="name">${c.name}</span></div>`;
+    }).join("");
+    $("roundNext").textContent = ri + 1 < ROUND_SIZES.length ? `ラウンド ${ri + 2} へ（${ROUND_SIZES[ri + 1]}枚）` : "結果を見る";
+    show("sRound");
+  }
+
+  function nextRound() {
+    ri++;
+    if (ri < ROUND_SIZES.length) startRound(); else showFinal();
+  }
+
+  /* さいごの けっか */
+  function showFinal() {
+    const total = allLog.reduce((s, r) => s + r.n, 0);
+    const good = allLog.reduce((s, r) => s + r.good, 0);
+    const rate = good / total;
+    const starN = rate >= 0.9 ? 3 : rate >= 0.7 ? 2 : 1;
+    $("finalScore").textContent = good;
+    $("finalTotal").textContent = total;
+    $("finalTitle").textContent = good === total ? "ぜんぶ思い出せました！" : starN >= 2 ? "よくできました！" : "おつかれさまでした";
+    $("finalTable").innerHTML = allLog.map((r, i) =>
+      `<tr><td>ラウンド ${i + 1}（${r.n}枚）</td><td>${r.good} / ${r.n}</td></tr>`).join("");
+    const spans = $("stars").children;
+    [...spans].forEach(s => { s.className = ""; });
+    show("sFinal");
+    for (let i = 0; i < starN; i++) {
+      setTimeout(() => { spans[i].className = "pop"; play("star", i); }, 400 + i * 380);
+    }
+    const after = 400 + starN * 380;
+    if (good === total) setTimeout(() => { play("fanfare"); confetti(); }, after);
+    else if (starN === 3) setTimeout(confetti, after);
+  }
+
+  /* かみふぶき */
+  let confettiRun = 0;
+  function stopConfetti() {
+    confettiRun++;
+    const cv = $("fx");
+    cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+  }
+  function confetti() {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cv = $("fx"), ctx = cv.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const W = innerWidth, H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr; ctx.scale(dpr, dpr);
+    const colors = ["#f4a261", "#7fb7de", "#9fd3a4", "#f2c14e", "#ec8f8f", "#c3a6e0"];
+    const bits = Array.from({ length: 140 }, () => ({
+      x: W / 2 + (Math.random() - 0.5) * W * 0.3, y: H * 0.35,
+      vx: (Math.random() - 0.5) * 11, vy: -Math.random() * 12 - 4,
+      w: 6 + Math.random() * 6, h: 4 + Math.random() * 4,
+      a: Math.random() * Math.PI, va: (Math.random() - 0.5) * 0.3,
+      c: colors[rnd(0, colors.length - 1)],
+    }));
+    const id = ++confettiRun, t0 = performance.now();
+    (function frame(now) {
+      if (id !== confettiRun) return;
+      ctx.clearRect(0, 0, W, H);
+      let alive = false;
+      for (const b of bits) {
+        b.vy += 0.28; b.vx *= 0.99; b.x += b.vx; b.y += b.vy; b.a += b.va;
+        if (b.y < H + 20) alive = true;
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
+        ctx.fillStyle = b.c; ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h * Math.abs(Math.cos(b.a * 2)));
+        ctx.restore();
+      }
+      if (alive && now - t0 < 6000) requestAnimationFrame(frame); else ctx.clearRect(0, 0, W, H);
+    })(t0);
+  }
+
+  /* キーボード（選択肢は 1〜4、ボタンは Enter） */
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") e.preventDefault();
+    const on = id => $(id).classList.contains("on");
+    if (on("sRecall") && /^[1-4]$/.test(e.key)) answer(Number(e.key) - 1);
+    else if (e.key === "Enter" || e.key === " ") {
+      if (on("sTitle")) start();
+      else if (on("sMemo")) endMemo();
+      else if (on("sRound")) nextRound();
+    }
+  });
+
+  $("startBtn").onclick = start;
+  $("againBtn").onclick = start;
+  $("memoDone").onclick = endMemo;
+  $("roundNext").onclick = nextRound;
+  $("muteBtn").onclick = () => { muted = !muted; store.set("tegakari-mute", muted ? "1" : "0"); renderMute(); if (!muted) play("tap"); };
+  renderMute();
+})();
+</script>
+</body>
+</html>
